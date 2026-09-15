@@ -345,6 +345,7 @@ Several files (frontend/, main.jsx, App.jsx) landed in the wrong directory relat
 
 **LangGraph / LangChain version drift**
 No pinned versions in early requirements.txt - a pip install on a different machine could resolve a newer langgraph release with a changed StateGraph API and silently break the agent. Mitigated by freezing exact versions (pip freeze > requirements.txt) once the agent was verified working, rather than trusting >= minimums.
+
 ---
 
 ## Production Checklist

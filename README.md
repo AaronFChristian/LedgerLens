@@ -318,6 +318,35 @@ LedgerLens/
 
 ---
 
+## Problems Faced
+
+Real issues hit during the build, not a sanitised list.
+
+**Neo4j Aura connection - "ServiceUnavailable: Unable to retrieve routing information"**
+The neo4j+s:// URI scheme uses Aura's routing protocol, which failed to resolve locally. Switched to bolt+s:// - a direct encrypted connection that bypasses routing entirely and works fine for a single-instance Aura deployment.
+
+**Neo4j Aura connection - SSL certificate verification failure**
+After switching to bolt+s://, connections still failed with SSLCertVerificationError. macOS's bundled Python doesn't ship trusted root certificates by default. Fixed by running Install Certificates.command from the Python.framework install, which links the certifi bundle system-wide.
+
+**Neo4j username confusion**
+Assumed the Aura username was always the literal string "neo4j". Aura actually generates a random username per instance (shown once at creation, alongside the password) - using the wrong one produced the same generic connection error as the URI and SSL issues, which cost time triangulating the real cause.
+
+**FastAPI ResponseValidationError on /extract**
+file.size is not populated by Starlette's UploadFile in this version - checking it before reading the file always evaluated None, and the endpoint's Pydantic response model then received None instead of a dict. Fixed by reading file.read() first and checking len(contents) against the size limit, not the UploadFile.size attribute.
+
+**CORD ground truth field mismatch**
+The eval harness initially returned n/a for every total-amount comparison. CORD's JSON nests the total under gt_parse.total.total_price, not gt_parse.summary as first assumed from a partial read of the schema - the parser was silently matching zero records instead of erroring.
+
+**Numeric string vs float mismatch in eval comparisons**
+Even after fixing the field path, accuracy stayed at 0%. CORD stores amounts as plain integer strings ("5000"); Claude's extraction returns floats (5000.0). String-equality comparison after normalisation still failed on the .0 suffix. Fixed by parsing both sides to float and comparing numerically instead of as strings.
+
+**Project structure drift between chat-generated files and the real filesystem**
+Several files (frontend/, main.jsx, App.jsx) landed in the wrong directory relative to src/ledgerlens/ during manual copy-paste from chat into VSCode. Caught by periodically screenshotting the VSCode file tree and diffing it against the intended structure rather than assuming each copy-paste landed correctly.
+
+**LangGraph / LangChain version drift**
+No pinned versions in early requirements.txt - a pip install on a different machine could resolve a newer langgraph release with a changed StateGraph API and silently break the agent. Mitigated by freezing exact versions (pip freeze > requirements.txt) once the agent was verified working, rather than trusting >= minimums.
+---
+
 ## Production Checklist
 
 Built for portfolio demonstration. Before production use:

@@ -340,9 +340,6 @@ The eval harness initially returned n/a for every total-amount comparison. CORD'
 **Numeric string vs float mismatch in eval comparisons**
 Even after fixing the field path, accuracy stayed at 0%. CORD stores amounts as plain integer strings ("5000"); Claude's extraction returns floats (5000.0). String-equality comparison after normalisation still failed on the .0 suffix. Fixed by parsing both sides to float and comparing numerically instead of as strings.
 
-**Project structure drift between chat-generated files and the real filesystem**
-Several files (frontend/, main.jsx, App.jsx) landed in the wrong directory relative to src/ledgerlens/ during manual copy-paste from chat into VSCode. Caught by periodically screenshotting the VSCode file tree and diffing it against the intended structure rather than assuming each copy-paste landed correctly.
-
 **LangGraph / LangChain version drift**
 No pinned versions in early requirements.txt - a pip install on a different machine could resolve a newer langgraph release with a changed StateGraph API and silently break the agent. Mitigated by freezing exact versions (pip freeze > requirements.txt) once the agent was verified working, rather than trusting >= minimums.
 

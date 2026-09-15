@@ -1,4 +1,4 @@
-# LedgerLens - Multimodal Invoice Intelligence + GraphRAG 
+# LedgerLens - Multimodal Invoice Intelligence + GraphRAG
 
 > Reads an invoice image → extracts clean structured data → answers multi-hop supplier questions that vector search can't.
 

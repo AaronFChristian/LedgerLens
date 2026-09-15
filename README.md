@@ -13,9 +13,9 @@ Claude reads invoice images into structured data. A knowledge graph turns that d
 
 ## The Problem
 
-Finance and procurement teams at mid-market firms manually key 50,000+ invoices a month at roughly $3.50 an invoice — a $175,000-a-month line item that exists purely to move numbers from a PDF into a system of record. That's the visible cost.
+Finance and procurement teams at mid-market firms manually key 50,000+ invoices a month at roughly $3.50 an invoice a $175,000-a-month line item that exists purely to move numbers from a PDF into a system of record. That's the visible cost.
 
-The hidden cost is worse: even after the data is in a database, nobody can answer a question like *"which suppliers behind last month's delayed POs also had quality complaints in the past 18 months?"* Answering that means joining supplier identity, invoice history, and line-item detail across time — a multi-hop relationship question. Pure vector search retrieves similar documents; it has no concept of a graph edge, so it cannot traverse "supplier → invoice → complaint" the way the question requires.
+The hidden cost is worse: even after the data is in a database, nobody can answer a question like *"which suppliers behind last month's delayed POs also had quality complaints in the past 18 months?"* Answering that means joining supplier identity, invoice history, and line-item detail across time  a multi-hop relationship question. Pure vector search retrieves similar documents; it has no concept of a graph edge, so it cannot traverse "supplier → invoice → complaint" the way the question requires.
 
 LedgerLens closes both gaps in one pipeline: Claude vision extracts the data, a Neo4j knowledge graph encodes the relationships, and a LangGraph agent answers multi-hop questions with the graph path attached as proof.
 
@@ -27,7 +27,7 @@ Three pillars, wrapped by observability and evals.
 
 ```mermaid
 flowchart TB
-    subgraph P1["Pillar 1 — Extraction"]
+    subgraph P1["Pillar 1  Extraction"]
         direction LR
         A[Invoice image] --> B[Claude vision extraction]
         B --> C[Pydantic validation<br/>+ confidence scoring]
@@ -36,13 +36,13 @@ flowchart TB
         D -->|confidence < 0.75| F[Human review queue]
     end
 
-    subgraph P2["Pillar 2 — Knowledge graph"]
+    subgraph P2["Pillar 2  Knowledge graph"]
         direction LR
         G[LLM entity resolution] --> H[(Neo4j knowledge graph<br/>Supplier to Invoice to LineItem)]
         H --> I[LangGraph GraphRAG agent<br/>plan then query then synthesize]
     end
 
-    subgraph P3["Pillar 3 — Serving"]
+    subgraph P3["Pillar 3  Serving"]
         direction LR
         J[FastAPI backend<br/>/extract /ask] --> K[React frontend]
     end
@@ -65,7 +65,7 @@ flowchart TB
     style P4 fill:#fffbeb,stroke:#f59e0b
 ```
 
-### Data flow — extraction pipeline
+### Data flow  extraction pipeline
 
 ```mermaid
 flowchart LR
@@ -83,7 +83,7 @@ flowchart LR
     style I fill:#fef2f2,stroke:#ef4444
 ```
 
-### Sequence — ask the graph
+### Sequence  ask the graph
 
 ```mermaid
 sequenceDiagram
@@ -144,11 +144,11 @@ erDiagram
 
 ## How It Works
 
-An invoice image goes in. Claude vision (`claude-sonnet-4-6`) returns structured JSON. Pydantic validates every field and cross-checks the math. A confidence score is computed per field, and anything below threshold — or any critical field extracted with zero confidence — is routed to a human review queue instead of silently auto-approving bad data.
+An invoice image goes in. Claude vision (`claude-sonnet-4-6`) returns structured JSON. Pydantic validates every field and cross-checks the math. A confidence score is computed per field, and anything below threshold  or any critical field extracted with zero confidence  is routed to a human review queue instead of silently auto-approving bad data.
 
-Approved extractions go through LLM-driven entity resolution — Claude normalises "Apple Inc" / "Apple Computer" / "APPLE" into one canonical node, which is the single most common silent failure mode in GraphRAG systems. The resolved entities load into Neo4j as `Supplier → Invoice → LineItem` relationships. A LangGraph agent then answers natural-language questions by planning Cypher queries, executing them against the graph, and synthesising an answer — returning the exact query and traversal path alongside it, so every answer is auditable.
+Approved extractions go through LLM-driven entity resolution  Claude normalises "Apple Inc" / "Apple Computer" / "APPLE" into one canonical node, which is the single most common silent failure mode in GraphRAG systems. The resolved entities load into Neo4j as `Supplier → Invoice → LineItem` relationships. A LangGraph agent then answers natural-language questions by planning Cypher queries, executing them against the graph, and synthesising an answer  returning the exact query and traversal path alongside it, so every answer is auditable.
 
-FastAPI exposes `/extract` and `/ask`. A React frontend gives non-technical users an upload box and a question box. Langfuse traces every span — extraction, entity resolution, graph query, synthesis — with token cost attached. A DeepEval/RAGAS harness scores field accuracy, groundedness, and context relevance, and gates CI so a prompt change that quietly tanks accuracy gets caught before it ships.
+FastAPI exposes `/extract` and `/ask`. A React frontend gives non-technical users an upload box and a question box. Langfuse traces every span  extraction, entity resolution, graph query, synthesis  with token cost attached. A DeepEval/RAGAS harness scores field accuracy, groundedness, and context relevance, and gates CI so a prompt change that quietly tanks accuracy gets caught before it ships.
 
 ---
 
@@ -156,64 +156,64 @@ FastAPI exposes `/extract` and `/ask`. A React frontend gives non-technical user
 
 | Feature | Why it matters |
 |---|---|
-| **Multimodal extraction (Claude vision)** | Reads scanned, photographed, or faxed invoices — no OCR pre-processing step |
-| **Confidence scoring + math cross-validation** | Not just field presence — checks subtotal + tax = total, flags negative/zero totals, penalises malformed dates |
-| **Human-review routing** | Critical fields at zero confidence always escalate, even if the overall score looks fine — no silent bad-data approval |
-| **LLM entity resolution** | Claude normalises supplier name variants before they hit the graph — the documented silent failure point of GraphRAG |
+| **Multimodal extraction (Claude vision)** | Reads scanned, photographed, or faxed invoices  no OCR pre-processing step |
+| **Confidence scoring + math cross-validation** | Not just field presence  checks subtotal + tax = total, flags negative/zero totals, penalises malformed dates |
+| **Human-review routing** | Critical fields at zero confidence always escalate, even if the overall score looks fine  no silent bad-data approval |
+| **LLM entity resolution** | Claude normalises supplier name variants before they hit the graph  the documented silent failure point of GraphRAG |
 | **Neo4j knowledge graph** | `Supplier ↔ Invoice ↔ LineItem` enables multi-hop questions vector search structurally cannot answer |
 | **LangGraph GraphRAG agent** | 3-state machine (understand → query_graph → synthesize) returns the Cypher and traversal path as an audit trail |
-| **DeepEval / RAGAS harness, CI-gated** | Field accuracy, groundedness, and context relevance scored automatically — the hardest signal to fake in an interview |
+| **DeepEval / RAGAS harness, CI-gated** | Field accuracy, groundedness, and context relevance scored automatically  the hardest signal to fake in an interview |
 | **Langfuse observability** | Span-level tracing across every stage with token cost per document |
-| **Cost panel** | $0.009/doc vs $3.50 manual — the ROI story is on the screen, not just in the README |
+| **Cost panel** | $0.009/doc vs $3.50 manual  the ROI story is on the screen, not just in the README |
 
 ---
 
 ## Tech Stack
 
 ### AI and extraction
-- **Claude Sonnet (claude-sonnet-4-6)** — vision extraction, entity resolution, GraphRAG synthesis
-- **Pydantic v2** — typed schemas, field validation, confidence scoring
-- **Anthropic SDK** — retry with exponential backoff, structured JSON prompting
+- **Claude Sonnet (claude-sonnet-4-6)**  vision extraction, entity resolution, GraphRAG synthesis
+- **Pydantic v2**  typed schemas, field validation, confidence scoring
+- **Anthropic SDK**  retry with exponential backoff, structured JSON prompting
 
 ### Graph and agent
-- **Neo4j Aura** — managed graph database, free tier
-- **LangGraph** — stateful 3-node agent (understand → query_graph → synthesize)
-- **LangChain** — agent scaffolding
+- **Neo4j Aura**  managed graph database, free tier
+- **LangGraph**  stateful 3-node agent (understand → query_graph → synthesize)
+- **LangChain**  agent scaffolding
 
 ### Evals and observability
-- **DeepEval / RAGAS** — field accuracy, groundedness, context relevance
-- **Langfuse** — span-level LLM tracing, token cost per call
-- **pytest** — CI-gated accuracy thresholds
+- **DeepEval / RAGAS**  field accuracy, groundedness, context relevance
+- **Langfuse**  span-level LLM tracing, token cost per call
+- **pytest**  CI-gated accuracy thresholds
 
 ### Backend and frontend
-- **FastAPI** — async REST API, CORS, file upload validation
-- **React + Vite** — upload UI, ask-the-graph UI, animated processing states
-- **Uvicorn** — ASGI server
+- **FastAPI**  async REST API, CORS, file upload validation
+- **React + Vite**  upload UI, ask-the-graph UI, animated processing states
+- **Uvicorn**  ASGI server
 
 ### Infrastructure
-- **Docker** — containerised backend
-- **Fly.io / Railway** — backend deploy target
-- **Vercel** — frontend deploy target
+- **Docker**  containerised backend
+- **Fly.io / Railway**  backend deploy target
+- **Vercel**  frontend deploy target
 - **Python 3.12**
 
 ---
 
 ## Build Plan
 
-### Day 1 — Extraction pipeline
+### Day 1  Extraction pipeline
 - Claude vision → Pydantic schema extraction with structured JSON prompting
 - Per-field confidence scoring (0.0–1.0) with subtotal+tax=total cross-validation
-- Human-review routing — critical fields at zero confidence always escalate
+- Human-review routing  critical fields at zero confidence always escalate
 - CORD v2 dataset download + field-level accuracy evaluation
 - Full offline pytest suite (25 tests, no API calls needed)
 
-### Day 2 — Knowledge graph + GraphRAG agent
+### Day 2  Knowledge graph + GraphRAG agent
 - Neo4j Aura schema: `(:Supplier)-[:ISSUED]->(:Invoice)-[:CONTAINS]->(:LineItem)`
-- LLM entity resolution — batched Claude call normalises all supplier name variants
+- LLM entity resolution  batched Claude call normalises all supplier name variants
 - LangGraph 3-state agent: understand (plan Cypher) → query_graph (execute) → synthesize (answer)
 - Every answer returns its Cypher queries and traversal path
 
-### Day 3 — Evals, observability, serving
+### Day 3  Evals, observability, serving
 - DeepEval/RAGAS harness: extraction accuracy + groundedness + context relevance, CI-gated at 70% threshold
 - Langfuse span tracing across extraction, resolution, graph query, and synthesis
 - FastAPI backend with `/extract` and `/ask`, file size limits, scoped CORS
@@ -227,14 +227,14 @@ FastAPI exposes `/extract` and `/ask`. A React frontend gives non-technical user
 ```
 Total amount accuracy:     84.2%  (16/19, CORD v2 zero-shot)
 Line item count accuracy:  45.0%  (9/20)
-Auto-approval rate:         0.0%  (CORD receipts have no invoice numbers —
+Auto-approval rate:         0.0%  (CORD receipts have no invoice numbers 
                                     correctly forces human review by design)
 Cost per document:        $0.009
 Manual cost baseline:     $3.50
 Savings at scale:          99.7%  (10k docs/mo ~= $90 vs $35,000 manual)
 ```
 
-CI gate: `total_amount accuracy >= 70%` — passing.
+CI gate: `total_amount accuracy >= 70%`  passing.
 
 ---
 
@@ -333,4 +333,4 @@ Built for portfolio demonstration. Before production use:
 
 ---
 
-**Cold-outreach hook:** *"I built a service that reads an invoice image into clean structured data and answers 'which suppliers behind last month's delayed POs also had quality issues' — with the full audit trail — using a knowledge graph instead of brittle vector search."*
+**Cold-outreach hook:** *"I built a service that reads an invoice image into clean structured data and answers 'which suppliers behind last month's delayed POs also had quality issues'  with the full audit trail  using a knowledge graph instead of brittle vector search."*
